@@ -1,157 +1,137 @@
 # Video Annotator - Sign Language Segmentation Tool
 
-A fast, keyboard-driven desktop tool to annotate sign language videos by marking sentence boundaries.
+A fast, keyboard-driven desktop tool to annotate sign language videos by marking sentence boundaries, now enhanced with **AI-powered split suggestions**.
 
 ---
 
-## Prerequisites
+## 🌟 Features
 
-### For Annotation (Required)
-| Requirement | Version |
-|---|---|
-| [Node.js](https://nodejs.org/) | 18 or higher |
-
-### For Video Cutting (Optional)
-| Requirement | Version |
-|---|---|
-| Python | 3.8 or higher |
-| imageio, imageio-ffmpeg | Latest (pip install) |
-
-Note: `imageio-ffmpeg` includes its own ffmpeg binary, no system installation needed.
+- **Keyboard-first design**: High-speed annotation using shortcuts.
+- **AI Suggestion**: Automatically detects resting poses (hands down) to suggest potential split points.
+- **Real-time Progress**: Visual feedback during AI analysis.
+- **Timeline Visualization**: Interactive canvas showing split points and current playback.
+- **Auto-save**: Never lose progress when switching between videos.
+- **Python Integration**: Includes scripts for both AI analysis and high-speed video cutting.
 
 ---
 
-## Installation & Launch
+## 🛠 Prerequisites
 
-```bash
-npm install
-npm start
-```
+### 1. For the Desktop App (Required)
+- [Node.js](https://nodejs.org/) (v18 or higher)
+
+### 2. For AI Suggestions (Required for "Suggest by AI")
+- Python 3.8 - 3.11 (MediaPipe supports up to 3.11)
+- Install dependencies:
+  ```bash
+  pip install opencv-python mediapipe numpy
+  ```
+
+### 3. For Video Cutting (Optional)
+- Python 3.8+
+- Install dependencies:
+  ```bash
+  pip install imageio imageio-ffmpeg
+  ```
 
 ---
 
-## Usage
+## 🚀 Installation & Setup
+
+1. **Clone and Install JS dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure Python Path:**
+   Open `main.js` and update the `pythonPath` variable to point to your Python executable or Virtual Environment:
+   ```javascript
+   // In main.js (around line 118)
+   const pythonPath = 'path/to/your/venv/Scripts/python.exe'; // Windows
+   // or 'path/to/your/venv/bin/python'; // Linux/macOS
+   ```
+
+3. **Start the app:**
+   ```bash
+   npm start
+   ```
+
+---
+
+## 💡 Usage Guide
 
 ### 1. Open a Folder
-Click "Open Folder" in the sidebar and select the folder containing your videos (.mp4, .avi, .mov, .mkv, .webm).
+Click **"Open Folder"** and select a directory. The sidebar will list all compatible videos.
+- 🟢 Green dot: Already annotated.
+- ⚪ Gray dot: New video.
 
-The sidebar will list all videos. Already-annotated videos are highlighted with a green indicator.
-The app auto-loads the first unannotated video.
+### 2. AI-Assisted Annotation (New!)
+If a video is new, a **"Suggest by AI"** button will appear in the transport bar.
+- Click it to start the MediaPipe analysis.
+- The button will show real-time progress (e.g., `Analyzing... 45%`).
+- The AI detects "Resting Poses" (when the signer lowers their hands) and marks the middle of those moments as splits.
+- You can then manually add, move, or delete these suggestions.
 
-### 2. Annotate
-Watch the video and press Space at each sentence boundary.
-A green marker appears on the timeline and the timestamp is added to the Splits panel.
+### 3. Manual Annotation
+- Press `Space` to mark a split at the current time.
+- Use `Arrow Keys` for navigation (see shortcuts below).
+- Click on any timestamp in the **Splits Panel** to jump to that moment.
 
-### 3. Save & Continue
-- Press `S` to save current annotation
-- Press `N` to auto-save and load the next video
-
-The annotation is saved as a JSON file next to the video:
-```
-videos/
-  video_001.mp4
-  video_001.json   (saved here)
-```
-
-### 4. Resume
-Reload the app and open the same folder. Previously marked splits reload automatically.
+### 4. Save & Export
+- Press `S` to save. Annotations are stored as `<video_name>.json` in the same folder.
+- Press `N` to move to the next video.
 
 ---
 
-## Keyboard Shortcuts
+## ⌨️ Keyboard Shortcuts
 
 | Key | Action |
 |---|---|
-| Space | Mark split at current timestamp |
-| Left/Right Arrow | Seek +/- 1 second |
-| Shift + Left/Right Arrow | Seek +/- 0.2 second |
-| Up/Down Arrow | Speed up / slow down (0.25x to 2x) |
-| Ctrl + Z | Undo last split |
-| S | Save annotation |
-| N | Next video (auto-saves) |
-| P or . | Toggle play/pause |
+| **Space** | Mark split at current timestamp |
+| **Left / Right** | Seek +/- 1 second |
+| **Shift + Left / Right** | Seek +/- 0.2 second (Fine tuning) |
+| **Up / Down** | Adjust playback speed (0.25x to 2x) |
+| **Ctrl + Z** | Undo last split |
+| **S** | Save current annotation |
+| **N** | Next video (Auto-saves current) |
+| **P** or **.** | Toggle Play / Pause |
 
 ---
 
-## Output Format
+## 🤖 How the AI works (`suggest_splits.py`)
 
-```json
-{
-  "video": "video_001.mp4",
-  "fps": 30,
-  "duration": 876.3,
-  "splits": [12.34, 19.80, 25.10, 31.92]
-}
-```
-
-Segments are inferred from splits. Example:
-- Segment 1: 0 to 12.34 seconds
-- Segment 2: 12.34 to 19.80 seconds
-- Segment 3: 19.80 to 25.10 seconds
+The AI uses **MediaPipe Pose Landmarking** to analyze the video at 6 FPS (for speed). It triggers a split suggestion when:
+1. **Wrists** are below the elbows.
+2. **Wrists** are near the hip level.
+3. **Low Motion**: The distance between hand coordinates in consecutive frames is minimal.
+4. **Duration**: The resting pose lasts longer than 0.6 seconds.
 
 ---
 
-## Cut Video into Clips
+## ✂️ Cutting Videos into Clips
 
-After annotating, run the Python cutter to split videos into segments:
+Once you have the `.json` files, use the provided Python script to generate the actual video segments. This process is extremely fast as it uses `stream copy` (no re-encoding).
 
-First, install dependencies:
 ```bash
-pip install imageio imageio-ffmpeg
-```
+# Cut a specific video
+python cut_video.py path/to/video_001.json
 
-Then cut videos:
-```bash
-# Cut one video
-python cut_video.py videos/video_001.json
-
-# Custom output folder
-python cut_video.py videos/video_001.json --out_dir clips/video_001/
-
-# Batch - cut all annotated videos in a folder
-for %f in (videos\*.json) do python cut_video.py "%f" --out_dir clips\
-```
-
-Output clips: `video_001_001.mp4`, `video_001_002.mp4`, etc.
-
-Note: Uses ffmpeg stream-copy via imageio-ffmpeg (no re-encoding, very fast). Already-existing clips are skipped.
-
----
-
-## Project Structure
-
-```
-video-annotator/
-├── main.js         Electron main process
-├── preload.js      IPC bridge for secure communication
-├── index.html      UI layout
-├── style.css       Dark theme styles
-├── renderer.js     UI logic and keyboard shortcuts
-├── cut_video.py    Video segment cutter (Python + ffmpeg)
-├── package.json    Electron app configuration
-├── .gitignore      Git ignore rules
-└── README.md       This file
+# Cut all videos in a folder and save to a "clips" directory
+python cut_video.py path/to/video_001.json --out_dir ./my_clips/
 ```
 
 ---
 
-## Features
+## 📂 Project Structure
 
-- Keyboard-first design for fast annotation
-- Real-time timeline visualization
-- Auto-save on video switch
-- Persistent annotations (JSON format)
-- Batch video processing support
-- Python script for automated video segmentation
-
----
-
-## License
-
-This project is provided as-is for sign language annotation tasks.
+- `main.js`: Electron main process & Python spawning logic.
+- `renderer.js`: UI logic, Canvas timeline, and event handling.
+- `suggest_splits.py`: MediaPipe logic for resting pose detection.
+- `cut_video.py`: FFmpeg-based script for segmenting videos.
+- `index.html` / `style.css`: The "Cyber-Dark" themed interface.
 
 ---
 
-## Support
+## 📝 License
 
-For issues or improvements, please create an issue in the repository.
+This tool is designed for research and data labeling in the field of Sign Language Recognition (SLR). Feel free to modify the `is_resting_pose` logic in `suggest_splits.py` to better fit your specific dataset.
