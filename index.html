@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Annotator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── SIDEBAR ─────────────────────────────────── -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <button id="btn-open-folder" title="Open video folder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+        Open Folder
+      </button>
+    </div>
+    <div id="video-list-container">
+      <div id="video-list-empty">
+        <p>No folder selected.<br/>Click "Open Folder" to begin.</p>
+      </div>
+      <ul id="video-list"></ul>
+    </div>
+    <div id="sidebar-stats">
+      <span id="stat-total">0 videos</span>
+      <span id="stat-done">0 done</span>
+    </div>
+  </aside>
+
+  <!-- ── MAIN AREA ───────────────────────────────── -->
+  <main id="main">
+    <!-- Top bar -->
+    <div id="topbar">
+      <span id="current-video-name">—</span>
+      <div id="topbar-controls">
+        <span id="speed-indicator" class="badge">1×</span>
+        <span id="save-status" class="badge badge-muted">unsaved</span>
+        <button id="btn-save" title="Save (S)">Save</button>
+        <button id="btn-next" title="Next video (N)">Next</button>
+      </div>
+    </div>
+
+    <!-- Video -->
+    <div id="video-wrapper">
+      <div id="video-placeholder">
+        <div class="placeholder-content">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" width="64" height="64"><rect x="4" y="12" width="56" height="40" rx="4"/><polygon points="24,22 24,42 44,32" fill="currentColor" stroke="none"/></svg>
+          <p>Open a folder and select a video to begin</p>
+        </div>
+      </div>
+      <video id="video-player" preload="auto"></video>
+    </div>
+
+    <!-- Timeline -->
+    <div id="timeline-container">
+      <span id="time-current">0:00.0</span>
+      <div id="timeline-track">
+        <div id="timeline-fill"></div>
+        <canvas id="timeline-canvas"></canvas>
+        <div id="playhead"></div>
+      </div>
+      <span id="time-total">0:00.0</span>
+    </div>
+
+    <!-- Transport controls (mouse fallback) -->
+    <div id="transport">
+      <button id="btn-seek-bwd-fine" title="−0.2s (Shift+←)">«</button>
+      <button id="btn-seek-bwd" title="−1s (←)">‹</button>
+      <button id="btn-play-pause" id="btn-play">▶</button>
+      <button id="btn-seek-fwd" title="+1s (→)">›</button>
+      <button id="btn-seek-fwd-fine" title="+0.2s (Shift+→)">»</button>
+      <button id="btn-split" class="btn-primary" title="Mark split (Space)">Split</button>
+      <button id="btn-undo" title="Undo last split (Ctrl+Z)">Undo</button>
+    </div>
+
+    <!-- Shortcuts reference -->
+    <div id="shortcuts-bar">
+      <span><kbd>Space</kbd> Split</span>
+      <span><kbd>←</kbd><kbd>→</kbd> ±1s</span>
+      <span><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> ±0.2s</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd> Speed</span>
+      <span><kbd>Ctrl+Z</kbd> Undo</span>
+      <span><kbd>S</kbd> Save</span>
+      <span><kbd>N</kbd> Next</span>
+    </div>
+  </main>
+
+  <!-- ── SPLITS PANEL ────────────────────────────── -->
+  <aside id="splits-panel">
+    <div id="splits-header">
+      <h3>Splits <span id="splits-count">0</span></h3>
+      <span id="segments-count" class="badge">0 segments</span>
+    </div>
+    <ul id="splits-list"></ul>
+  </aside>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

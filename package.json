@@ -1,0 +1,15 @@
+{
+  "name": "video-annotator",
+  "version": "1.0.0",
+  "description": "Sign language video annotation tool — mark sentence boundaries",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
