@@ -14,7 +14,7 @@ const state = {
     // videoInfo: null,  // Không dùng, có thể remove
 };
 
-const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 
 // ─── DOM Refs ─────────────────────────────────────────────────────────────────
 const video = document.getElementById('video-player');
@@ -127,14 +127,16 @@ timelineTrack.addEventListener('click', (e) => {
 // ─── Split Management ─────────────────────────────────────────────────────────
 function addSplit(ts) {
     const t = parseFloat(ts.toFixed(3));
-    if (state.splits.includes(t)) return; // deduplicate
+    if (state.splits.includes(t)) return;
     state.splits.push(t);
     state.splits.sort((a, b) => a - b);
+
     markUnsaved();
     renderSplitsList();
     drawTimeline();
-    // Sau khi add split thủ công, ẩn button AI nếu đang hiển thị
-    if (state.splits.length > 0) btnSuggestAI.style.display = 'none';
+
+    // Ẩn nút AI ngay khi có dữ liệu
+    btnSuggestAI.style.display = 'none';
 }
 
 function removeSplit(ts) {
@@ -142,8 +144,11 @@ function removeSplit(ts) {
     markUnsaved();
     renderSplitsList();
     drawTimeline();
-    // Nếu remove hết splits, show button lại nếu chưa saved
-    if (state.splits.length === 0 && !state.saved) btnSuggestAI.style.display = 'block';
+
+    // Nếu xóa sạch split thì hiện lại nút AI
+    if (state.splits.length === 0) {
+        btnSuggestAI.style.display = 'block';
+    }
 }
 
 function undoLastSplit() {
@@ -217,6 +222,13 @@ function flashStatus(msg) {
 // ─── Save / Load ──────────────────────────────────────────────────────────────
 async function saveAnnotation() {
     if (state.currentIndex < 0) return;
+
+    // NẾU KHÔNG CÓ SPLITS THÌ KHÔNG LƯU (Tránh tạo file JSON trống)
+    if (state.splits.length === 0) {
+        console.log("No splits to save, skipping...");
+        return;
+    }
+
     const v = state.videos[state.currentIndex];
     const data = {
         video: v.name,
@@ -227,14 +239,10 @@ async function saveAnnotation() {
     const res = await window.api.saveJson(v.jsonPath, data);
     if (res.ok) {
         markSaved();
-        // Mark video as annotated in list
         const li = videoList.querySelector(`li[data-index="${state.currentIndex}"]`);
         if (li) li.classList.add('annotated');
         updateStats();
-        // Sau save, ẩn button AI
-        btnSuggestAI.style.display = 'none';
-    } else {
-        alert('Save failed: ' + res.error);
+        btnSuggestAI.style.display = 'none'; // Đã có split và đã save thì ẩn nút AI
     }
 }
 
@@ -254,57 +262,51 @@ async function loadAnnotation(videoEntry) {
 async function loadVideo(index) {
     if (index < 0 || index >= state.videos.length) return;
 
-    // Auto-save previous
-    if (state.currentIndex >= 0 && !state.saved) {
+    // Tự động lưu video cũ trước khi sang video mới (Chỉ lưu nếu có dữ liệu)
+    if (state.currentIndex >= 0 && !state.saved && state.splits.length > 0) {
         await saveAnnotation();
     }
 
     state.currentIndex = index;
     const v = state.videos[index];
+
+    // --- QUAN TRỌNG: RESET TRẠNG THÁI & UI NGAY LẬP TỨC ---
     state.splits = [];
     state.duration = 0;
-    state.fps = 30;
+    renderSplitsList(); // Xóa danh sách cũ trên màn hình
+    drawTimeline();     // Xóa vạch cũ trên timeline
 
-    // Highlight in sidebar
+    // Highlight sidebar
     videoList.querySelectorAll('li').forEach(li => li.classList.remove('active'));
     const activeLi = videoList.querySelector(`li[data-index="${index}"]`);
-    if (activeLi) {
-        activeLi.classList.add('active');
-        activeLi.scrollIntoView({ block: 'nearest' });
-    }
+    if (activeLi) activeLi.classList.add('active');
 
     currentName.textContent = v.name;
-    document.title = `Video Annotator — ${v.name}`;
-
-    // Show video
     video.src = v.fullPath.replace(/\\/g, '/');
     video.style.display = 'block';
     placeholder.style.display = 'none';
 
-    // Load annotation first (before metadata)
-    const isResumed = await loadAnnotation(v);
+    // Load dữ liệu từ file JSON (nếu có)
+    await loadAnnotation(v);
 
-    // Chỉ markSaved nếu resumed (có existing splits), иначе markUnsaved cho video mới
-    if (isResumed) {
-        markSaved();
-    } else {
-        markUnsaved();  // Set saved=false cho video mới để show button
-    }
+    // Cập nhật lại UI sau khi đã load xong splits từ JSON
+    renderSplitsList();
+    drawTimeline();
 
-    // Get info via ffprobe (fallback to video element metadata)
+    // Mới load xong thì coi như Saved (vì UI đang khớp với File)
+    markSaved();
+
+    // Lấy thông tin thời lượng/fps
     const info = await window.api.getVideoInfo(v.fullPath);
     state.fps = info.fps || 30;
-    if (info.duration) {
-        state.duration = info.duration;
-    }
+    state.duration = info.duration || 0;
 
-    // Toggle button Suggest AI: Chỉ show nếu chưa có splits và chưa saved (video mới)
-    if (state.splits.length === 0 && !state.saved) {
+    // --- LOGIC HIỂN THỊ NÚT AI ---
+    // Hiện nút AI nếu video chưa có split nào
+    if (state.splits.length === 0) {
         btnSuggestAI.style.display = 'block';
-        console.log('Showing Suggest AI button');  // Debug: Check console
     } else {
         btnSuggestAI.style.display = 'none';
-        console.log('Hiding Suggest AI button');  // Debug
     }
 }
 
